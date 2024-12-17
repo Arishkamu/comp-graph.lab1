@@ -18,7 +18,9 @@ import radar.scene.SceneConfig
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import kotlin.random.Random
+import kotlin.test.Test
 import kotlin.test.assertTrue
+import kotlin.test.assertNotNull
 
 class KDTreeCollisionDetectionTest {
     companion object {
@@ -154,11 +156,59 @@ class KDTreeCollisionDetectionTest {
             bfFightCollisions.all { bfCollision ->
                 kdTreeFightCollisions.count { kdTreeCollision ->
                     kdTreeCollision.particle1 == bfCollision.particle1 &&
-                        kdTreeCollision.particle2 == bfCollision.particle2 ||
-                        kdTreeCollision.particle2 == bfCollision.particle1 &&
-                        kdTreeCollision.particle1 == bfCollision.particle2
+                            kdTreeCollision.particle2 == bfCollision.particle2 ||
+                            kdTreeCollision.particle2 == bfCollision.particle1 &&
+                            kdTreeCollision.particle1 == bfCollision.particle2
                 } == 1
             }
         }
+    }
+
+    private val workerPool = Executors.newFixedThreadPool(10)
+    private val collisionDetection = KDTreeCollisionDetection(workerPool, 10)
+
+    @Test
+    fun `test findCollisions with no particles`() {
+        repeat(100) {
+            val scene = CatScene(ArrayList<CatParticle>(), getSceneConfig())
+            val collisions = collisionDetection.findCollisions(scene)
+
+            // all cats must have calm state
+            assertTrue(collisions.count { it ->
+                it.particle1.state == CatStates.CALM && it.particle2.state == CatStates.CALM
+            } == collisions.size)
+        }
+    }
+
+    @Test
+    fun `test with many particles`() {
+        val particles = (1..10_000).map { id ->
+            CatParticle(Point2D(Math.random() * 100, Math.random() * 100))
+        } as ArrayList<CatParticle>
+        val scene = CatScene(particles, getSceneConfig(20))
+        val collisions = collisionDetection.findCollisions(scene)
+
+        assertNotNull(collisions)
+    }
+
+    @Test
+    fun `test batch size`() {
+        var particles = ArrayList<CatParticle>(100)
+        repeat(100) {
+            particles.add(CatParticle(Point2D(Math.random() * 100, Math.random() * 100)))
+        }
+        val scene = CatScene(particles, getSceneConfig(10))
+
+        // check that batchSize change after findCollisions
+        CollisionDetection.batchSize = 1
+        collisionDetection.findCollisions(scene)
+        assertTrue(CollisionDetection.batchSize != 0 && CollisionDetection.batchSize > 0)
+    }
+
+
+    private fun getSceneConfig(hissDist: Int = 1): SceneConfig {
+        val scene = SceneConfig()
+        scene.hissDist = hissDist
+        return scene
     }
 }
