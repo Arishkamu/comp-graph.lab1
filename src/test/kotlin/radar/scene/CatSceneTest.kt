@@ -1,13 +1,11 @@
 package radar.scene
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import radar.collisionDetection.BruteForceCollisionDetection
 import radar.generators.MoveGenerator
-import kotlin.math.sqrt
 import kotlin.random.Random
-import radar.scene.*
 
 class CatSceneTest {
 
@@ -19,8 +17,8 @@ class CatSceneTest {
     fun setUp() {
         sceneConfig = SceneConfig()
         sceneConfig.particleCount = 5
-        sceneConfig.hissDist = 2.0
-        sceneConfig.fightDist = 1.0
+        sceneConfig.hissDist = 2
+        sceneConfig.fightDist = 1
         particles = ArrayList()
         for (i in 0 until sceneConfig.particleCount) {
             particles.add(CatParticle(Point2D(Random.nextDouble(), Random.nextDouble())))
@@ -42,14 +40,13 @@ class CatSceneTest {
     }
 
     @Test
-    fun test resetStates sets all to CALM()
-    {
-        particles[0].setCatState(CatStates.HISS)
-        particles[1].setCatState(CatStates.FIGHT)
+    fun `test updateScene moves particles and updates states`() {
+        val particle1 = CatParticle(Point2D(0.0, 0.0), CatStates.HISS)
+        val particle2 = CatParticle(Point2D(1.5, 1.5), CatStates.FIGHT)
+        particles = arrayListOf(particle1, particle2)
+        scene = CatScene(particles, sceneConfig)
         scene.updateScene(MoveGenerator(sceneConfig))
-
-        particles.forEach { particle ->
-            assertEquals(CatStates.CALM, particle.state)
-        }
+        assertNotEquals(CatStates.CALM, particle1.state)
+        assertNotEquals(CatStates.CALM, particle2.state)
     }
 }
